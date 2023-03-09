@@ -69,7 +69,7 @@ BTDevList(Search_Params=31, Timeout=0)
 	NumPut(ReturnUnknown, BLUETOOTH_DEVICE_SEARCH_PARAMS, 12, "uint") ; fReturnUnknown
 	NumPut(ReturnConnected, BLUETOOTH_DEVICE_SEARCH_PARAMS, 16, "uint") ; fReturnConnected
 	NumPut(IssueInquiry, BLUETOOTH_DEVICE_SEARCH_PARAMS, 20, "uint") ; fIssueInquiry
-	NumPut(1, BLUETOOTH_DEVICE_SEARCH_PARAMS, 24, "uint") ; cTimeoutMultiplier
+	NumPut(Timeout, BLUETOOTH_DEVICE_SEARCH_PARAMS, 24, "uint") ; cTimeoutMultiplier
 	
 	;https://www.autohotkey.com/boards/viewtopic.php?f=76&t=83224&sid=e91fdb4bfefebefbb45b786e56eccdb7&start=20
 	VarSetCapacity(BLUETOOTH_DEVICE_INFO, 560, 0)

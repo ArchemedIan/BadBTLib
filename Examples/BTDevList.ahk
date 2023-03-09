@@ -5,13 +5,14 @@ SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 
 Global BadBTLib_Req_Major := 0
 Global BadBTLib_Req_Minor := 1
-#include BadBTLib.ahk
+#include ..\BadBTLib.ahk
+FileDelete, BTDevList.txt
 
 
-FileDelete, btdevinfo.txt
-BtDevices := BTDevList(31, 8)
-NumOfDevices := BtDevices.Length()
-;msgbox % NumOfDevices
+BtDevices := BTDevList(31, 8) ;return all bt devices found in 10.24 8 x 1.28) seconds (and their infos) 
+
+
+NumOfDevices := BtDevices.Length() ;Store infos 
 loop %NumOfDevices%
 {
 	Devnum	:= A_Index 
@@ -26,6 +27,6 @@ loop %NumOfDevices%
 
 	info :=	"Device #: " Devnum "`nName: " Name "`nAddr: " Addr "`nCoD: " CoD "`nConSts: " ConSts "`nRemSts: " RemSts "`nAuthSts: " AuthSts "`nLSeen: " LSeen "`nLUsed: " LUsed "`n`n"
 	
-	FileAppend, % info, %A_ScriptDir%\btdevinfo.txt
+	FileAppend, % info, %A_ScriptDir%\BTDevList.txt
 }
 ExitApp

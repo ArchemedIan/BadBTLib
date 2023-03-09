@@ -5,7 +5,7 @@ SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 
 Global BadBTLib_Req_Major := 0
 Global BadBTLib_Req_Minor := 2
-#include BadBTLib.ahk
+#include ..\BadBTLib.ahk
 
 LJoyconAddr := "EC:C4:0D:89:E9:95"
 RJoyconAddr := "EC:C4:0D:8A:47:40"

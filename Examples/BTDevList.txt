@@ -1,0 +1,30 @@
+Device #: 1
+Name: Soundcore Life P3i
+Addr: 5C:56:A4:87:8B:CD
+CoD: 2360324
+ConSts: 32
+RemSts: 16
+AuthSts: 8
+LSeen: 2023-03-09-12-27-24-438
+LUsed: 2023-03-09-06-30-07-927
+
+Device #: 2
+Name: Joy-Con (L)
+Addr: EC:C4:0D:89:E9:95
+CoD: 1288
+ConSts: 32
+RemSts: 16
+AuthSts: 0
+LSeen: 2023-03-09-12-27-24-438
+LUsed: 2023-03-09-06-59-52-457
+
+Device #: 3
+Name: Joy-Con (R)
+Addr: EC:C4:0D:8A:47:40
+CoD: 1288
+ConSts: 32
+RemSts: 16
+AuthSts: 0
+LSeen: 2023-03-09-12-27-24-438
+LUsed: 2023-03-09-06-59-55-183
+
