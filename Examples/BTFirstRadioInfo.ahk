@@ -1,32 +1,31 @@
 #NoEnv  ; Recommended for performance and compatibility with future AutoHotkey releases.
 SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
-#Persistent ;Keeps script open
+;#Persistent ;Keeps script open
 #SingleInstance Force
+#Warn All, Off
+
+
 
 Global BadBTLib_Req_Major := 1
 Global BadBTLib_Req_Minor := 3
 #include ..\BadBTLib.ahk
-FileDelete, BTDevInfo.txt
 
 
 
-NameOrAddr := "Joy-Con (L)"   ;search for a left joycon
-BtDevice := BTDevInfo(NameOrAddr, 25) ; for 32 seconds (25 x 1.28)
 
+FileDelete, BTFirstRadioInfo.txt
+BtRadio := BTFirstRadioInfo()
+ 
+Name 	:= BtRadio.Name
+Addr 	:= BtRadio.Addr
+CoD 	:= BtRadio.CoD
 
-;store infos
-Name 	:= BtDevice.Name
-Addr 	:= BtDevice.Addr
-CoD 	:= BtDevice.CoD
-CoDObj	:= CoD2Obj(Bin(CoD))
-ConSts 	:= BtDevice.ConSts
-RemSts 	:= BtDevice.RemSts
-AuthSts := BtDevice.AuthSts
-LSeen 	:= BtDevice.LSeen
-LUsed 	:= BtDevice.LUsed
+SubVer	:= BtRadio.SubVer
+Manufacturer	:= BtRadio.Manufacturer
 
-info :=	"Device #: " Devnum "`nName: " Name "`nAddr: " Addr "`nCoD: " CoD "`nConSts: " ConSts "`nRemSts: " RemSts "`nAuthSts: " AuthSts "`nLSeen: " LSeen "`nLUsed: " LUsed "`n`n"
+info :=	"Name: " Name "`nAddr: " Addr "`nSubVer: " SubVer "`nManufacturer: " Manufacturer
 
+CoDObj := CoD2Obj(Bin(CoD))	
 s1 := CoDObj.ServiceClasses.LimitedDiscoverableMode ? "Yes" : "No"
 s2 := CoDObj.ServiceClasses.Positioning ? "Yes" : "No"
 s3 := CoDObj.ServiceClasses.Networking ? "Yes" : "No"
@@ -64,7 +63,11 @@ if (CoDObj.Major.Class = "LAN" or CoDObj.Major.Class = "Peripheral" or CoDObj.Ma
 		isPrinter := CoDObj.Minor.Printer ? "Yes" : "No"
 		CoDinfo := CoDinfo "`nImaging info:`n" "`nDisplay: " isDisplay "`nCamera: " isCamera "`nScanner: " isScanner "`nPrinter: " isPrinter
 	}
+}
 
-FileAppend , % info "`n" Servicesinfo "`n" CoDinfo, %A_ScriptDir%\BTDevInfo.txt
 
-ExitApp
+FileAppend , % "RadioDetails:`n" info "`n`nServices:`n" Servicesinfo "`n`nCoD:`n" CoDinfo, BTFirstRadioInfo.txt
+
+
+return
+

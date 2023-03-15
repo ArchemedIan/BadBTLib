@@ -1,28 +1,46 @@
 
 
-Global BadBTLib_Ver_Major := 0
-Global BadBTLib_Ver_Minor := 2
+Global BadBTLib_Ver_Major := 1
+Global BadBTLib_Ver_Minor := 3
 VerChk()
 
 ;;;;;;;;;;			Funtion List			;;;;;;;;;;
+
+;; BTFirstRadioInfo()
+;;;; Returns AHK Object of the First BT Radio AND its info, see example for usage
+
+
 ;; BTDevList(Search_Params, Timeout)
 ;;;; Returns AHK Object of BT devices AND their info, see example for usage, Search params, and what info is availible
-;;;; Default search parameters and timeout will instantly return all connected, authenticated and remembered devices, and any unknown device windows is currently tracking
+;;;;
+;;;; Default search parameters and timeout will instantly return all connected, authenticated and remembered devices, 
+;;;; and any unknown device windows is currently tracking
+;;;;
 ;;;; Timeout is in multiples of 1.28 seconds, so a value of 5 is 6.4 seconds, blame microsoft. 
-;;
+
+
 ;; BTDevInfo(NameOrAddr, Timeout)
-;;;; Returns AHK object of a single bluetooth devices info, see example for usage and what info is availible 
-;;;; Will return any device found within the timeout, default Timeout is 0, which will usually only return authenticated, remembered, and/or connected devices, but can also return unknown devices if the timing is right.
-;;;; Again, timeout is in multiples of 1.28 seconds, so a value of 5 is 6.4 seconds, blame microsoft. 
-;;
+;;;; Returns AHK object of a single bluetooth devices info, see example for usage and what info is availible
+;;;;
+;;;; Will return any device found within the timeout, default Timeout is 0, which will usually only return 
+;;;; authenticated, remembered, and/or connected devices, but can also return unknown devices if the timing is right.
+;;;;
+;;;; Again, timeout is in multiples of 1.28 seconds, so a value of 5 is 6.4 seconds, blame microsoft.
+
+
 ;; mkBTDevInfoSTRUCT(Var, Addr, Name, CoD)
 ;;;; Creates a variable that refers to a (STRUCTured) space in memory that can be used by windows/C functions (i think thats what im doing??? lol)
+;;;;
 ;;;; This is how youll adress a specific device when dis/connecting or otherwise manipulating the status or services of a bluetooth device.
+;;;;
 ;;;; The variable name is the only required input, but may not work in all cases if theyre not all specified; and obviously wont work if none are, but it will still create an empty structure
+;;;;
 ;;;; You should use BTDevInfo() to get the information required.
-;;
+
+
 ;; BTSetServiceState(OnOff, BTDevInfoSTRUCT, CLSID)
 ;;;; Change the state of a service by CLSID (google is your friend)
+;;;;
 ;;;; On (1) off (0) or Toggle off then on (2)
 
 
@@ -31,7 +49,47 @@ VerChk()
 
 ;;;;;;;; BTDev
 
-BTDevList(Search_Params=31, Timeout=0)
+BTFirstRadioInfo()
+{
+	ThisBtRadios := {}
+	;init lib 
+	DllCall("LoadLibrary", "str", "Bthprops.cpl", "ptr")
+	
+	;init params struct	https://learn.microsoft.com/en-us/windows/win32/api/bluetoothapis/ns-bluetoothapis-bluetooth_find_radio_params
+	VarSetCapacity(BLUETOOTH_FIND_RADIO_PARAMS, 4, 0)
+	NumPut(4, BLUETOOTH_FIND_RADIO_PARAMS, 0, "uInt")
+		
+	;try (and fail?) to get handle	;https://learn.microsoft.com/en-us/windows/win32/api/bluetoothapis/nf-bluetoothapis-bluetoothfindfirstradio
+	hRadio := DllCall("Bthprops.cpl\BluetoothFindFirstRadio", "ptr", &BLUETOOTH_FIND_RADIO_PARAMS, "ptr*", BLUETOOTH_RADIO_HANDLE)
+	;msgbox % "Result: " BLUETOOTH_RADIO_HANDLE " EL: " ErrorLevel " LE: " A_LastError 
+	
+	;init info struct	https://learn.microsoft.com/en-us/windows/win32/api/bluetoothapis/ns-bluetoothapis-bluetooth_radio_info
+	VarSetCapacity(BLUETOOTH_RADIO_INFO, 520, 0)
+	NumPut(520, BLUETOOTH_RADIO_INFO, 0, "uint")
+	
+	;try and fail to fill info struct from handle	
+	;https://learn.microsoft.com/en-us/windows/win32/api/bluetoothapis/nf-bluetoothapis-bluetoothgetradioinfo
+	chk := DllCall("Bthprops.cpl\BluetoothGetRadioInfo", "ptr", BLUETOOTH_RADIO_HANDLE, "ptr", &BLUETOOTH_RADIO_INFO)
+	;msgbox % "Result: " chk " EL: " ErrorLevel " LE: " A_LastError 
+	
+	;https://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes--0-499-
+	
+	ThisAddr := NumGet(&BLUETOOTH_RADIO_INFO, 8, "int64")
+	ThisAddr :=	Dec2Mac(ThisAddr) ;msgbox % ThisAddr
+	ThisName := StrGet(&BLUETOOTH_RADIO_INFO + 16, 248) ;MsgBox % ThisName
+	ThisCoD := NumGet(&BLUETOOTH_RADIO_INFO, 512, "UInt")
+	ThisSubVer := NumGet(&BLUETOOTH_RADIO_INFO, 516, "UShort")
+	ThisManufacturer := NumGet(&BLUETOOTH_RADIO_INFO, 518, "UShort")
+	if ( ThisName = "")
+		ThisName = (no Radio name)
+	
+	ThisBtRadio := object("Name",ThisName, "Addr",ThisAddr, "CoD",ThisCoD, "SubVer",ThisSubVer, "Manufacturer",ThisManufacturer)
+	DllCall("Bthprops.cpl\BluetoothFindRadioClose", "ptr", foundedRadio)
+	Return ThisBtRadio
+}
+
+
+BTDevList(Search_Params=15, Timeout=0)
 {
 	ThisBtDevices := {}
 	;https://learn.microsoft.com/en-us/windows/win32/api/bluetoothapis/ns-bluetoothapis-bluetooth_device_search_params
@@ -62,7 +120,9 @@ BTDevList(Search_Params=31, Timeout=0)
 	ReturnRemembered := Search_Params[2]
 	ReturnUnknown := Search_Params[3]
 	ReturnConnected := Search_Params[4]
-	IssueInquiry := Search_Params[5]
+	;IssueInquiry := Search_Params[5]
+	IssueInquiry := Timeout > 0 ? 1 : 0
+	
 	
 	NumPut(ReturnAuthenticated, BLUETOOTH_DEVICE_SEARCH_PARAMS, 4, "uint") ; fReturnAuthenticated
 	NumPut(ReturnRemembered, BLUETOOTH_DEVICE_SEARCH_PARAMS, 8, "uint") ; fReturnRemembered
@@ -327,6 +387,241 @@ BTSetServiceState(OnOff, ByRef BTDevInfoSTRUCT, CLSID="{00001124-0000-1000-8000-
 
 
 
+CoD2Obj(DecimalCoD)
+{
+	BinaryCod := {}
+	ThisCoDObj := {}
+	ServiceClasses := {}
+	
+	binlen := StrLen(DecimalCoD)
+	pad := 24 - binlen
+	if (binlen < 24)
+		loop %pad%
+			padin := "0" padin
+	DecimalCoD := padin . DecimalCoD
+	binlen := StrLen(DecimalCoD)
+	;msgbox % DecimalCoD
+	Loop 24
+	{
+		bit := SubStr(DecimalCoD, -(A_Index-1), 1)
+		;BinaryCod.Push(bit)
+		BinaryCod.InsertAt(A_Index-1, bit)
+		;msgbox % "bit" A_Index-1 ": " bit
+	}
+	
+	ServiceClasses := object("LimitedDiscoverableMode",BinaryCod[13], "Positioning",BinaryCod[16], "Networking",BinaryCod[17], "Rendering",BinaryCod[18], "Capturing",BinaryCod[19], "ObjectTransfer",BinaryCod[20], "Audio",BinaryCod[21], "Telephony",BinaryCod[22], "Information",BinaryCod[23])
+	
+	
+	
+	if !(BinaryCod[12]) and !(BinaryCod[11]) and !(BinaryCod[10]) and !(BinaryCod[9]) and !(BinaryCod[8]) {
+		MajorCoD := object("Class","Miscellaneous")
+		MinorCoD := object("Class","Miscellaneous")
+	}
+	if !(BinaryCod[12]) and !(BinaryCod[11]) and !(BinaryCod[10]) and !(BinaryCod[9]) and (BinaryCod[8]) 
+	{
+		MajorCoD := object("Class","Computer")
+		;if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and !(BinaryCod[4]) and !(BinaryCod[3]) and !(BinaryCod[2])
+		MinorCoD := "Uncategorized, code for device not assigned"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and !(BinaryCod[4]) and !(BinaryCod[3]) and (BinaryCod[2])
+			MinorCoD := "Desktop workstation"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and !(BinaryCod[4]) and (BinaryCod[3]) and !(BinaryCod[2])
+			MinorCoD := "Server-class computer"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and !(BinaryCod[4]) and  (BinaryCod[3]) and  (BinaryCod[2])
+			MinorCoD := "Laptop"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and  (BinaryCod[4]) and !(BinaryCod[3]) and !(BinaryCod[2])
+			MinorCoD := "Handheld PC/PDA (clam shell)"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and  (BinaryCod[4]) and !(BinaryCod[3]) and  (BinaryCod[2])
+			MinorCoD := "Palm sized PC/PDA"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and  (BinaryCod[4]) and  (BinaryCod[3]) and !(BinaryCod[2])
+			MinorCoD := "Wearable computer (Watch sized)"
+			
+		MinorCoD := object("Class",MinorCoD)
+	}
+	if !(BinaryCod[12]) and !(BinaryCod[11]) and !(BinaryCod[10]) and (BinaryCod[9]) and !(BinaryCod[8]) 
+	{
+		MajorCoD := object("Class","Phone")
+		;if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and !(BinaryCod[4]) and !(BinaryCod[3]) and !(BinaryCod[2])
+		MinorCoD := "Uncategorized, code for device not assigned"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and !(BinaryCod[4]) and !(BinaryCod[3]) and (BinaryCod[2])
+			MinorCoD := "Cellular"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and !(BinaryCod[4]) and (BinaryCod[3]) and !(BinaryCod[2])
+			MinorCoD := "Cordless"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and !(BinaryCod[4]) and  (BinaryCod[3]) and  (BinaryCod[2])
+			MinorCoD := "Smart phone"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and  (BinaryCod[4]) and !(BinaryCod[3]) and !(BinaryCod[2])
+			MinorCoD := "Wired modem or voice gateway"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and  (BinaryCod[4]) and !(BinaryCod[3]) and  (BinaryCod[2])
+			MinorCoD := "Common ISDN Access"
+			
+		MinorCoD := object("Class",MinorCoD)
+	}
+	if !(BinaryCod[12]) and !(BinaryCod[11]) and !(BinaryCod[10]) and (BinaryCod[9]) and (BinaryCod[8]) 
+	{
+		MajorCoD := object("Class","LAN")
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5])
+			MinorCoD := object("Class","LAN", "Available",1, "UtilizationLevel",0)
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and (BinaryCod[5])
+			MinorCoD := object("Class","LAN", "Available",1, "UtilizationLevel",1)
+		if !(BinaryCod[7]) and (BinaryCod[6]) and !(BinaryCod[5])
+			MinorCoD := object("Class","LAN", "Available",1, "UtilizationLevel",2)
+		if !(BinaryCod[7]) and (BinaryCod[6]) and (BinaryCod[5])
+			MinorCoD := object("Class","LAN", "Available",1, "UtilizationLevel",3)
+		if (BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5])
+			MinorCoD := object("Class","LAN", "Available",1, "UtilizationLevel",4)
+		if (BinaryCod[7]) and !(BinaryCod[6]) and (BinaryCod[5])
+			MinorCoD := object("Class","LAN", "Available",1, "UtilizationLevel",5)
+		if (BinaryCod[7]) and (BinaryCod[6]) and !(BinaryCod[5])
+			MinorCoD := object("Class","LAN", "Available",1, "UtilizationLevel",6)
+		if (BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5])
+			MinorCoD := object("Class","LAN", "Available",0, "UtilizationLevel",7)
+		
+	}
+	if !(BinaryCod[12]) and !(BinaryCod[11]) and (BinaryCod[10]) and !(BinaryCod[9]) and !(BinaryCod[8]) 
+	{
+		MajorCoD := object("Class","AV")
+		;if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and !(BinaryCod[4]) and !(BinaryCod[3]) and !(BinaryCod[2])
+		MinorCoD := "Uncategorized, code not assigned"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and !(BinaryCod[4]) and !(BinaryCod[3]) and (BinaryCod[2])
+			MinorCoD := "Wearable Headset Device"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and !(BinaryCod[4]) and (BinaryCod[3]) and !(BinaryCod[2])
+			MinorCoD := "Hands-free Device"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and !(BinaryCod[4]) and (BinaryCod[3]) and (BinaryCod[2])
+			MinorCoD := "(Reserved)"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and (BinaryCod[4]) and !(BinaryCod[3]) and !(BinaryCod[2])
+			MinorCoD := "Microphone"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and (BinaryCod[4]) and !(BinaryCod[3]) and (BinaryCod[2])
+			MinorCoD := "Loudspeaker"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and (BinaryCod[4]) and (BinaryCod[3]) and !(BinaryCod[2])
+			MinorCoD := "Headphones"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and (BinaryCod[4]) and (BinaryCod[3]) and (BinaryCod[2])
+			MinorCoD := "Portable Audio"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and (BinaryCod[5]) and !(BinaryCod[4]) and !(BinaryCod[3]) and !(BinaryCod[2])
+			MinorCoD := "Car audio"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and (BinaryCod[5]) and !(BinaryCod[4]) and !(BinaryCod[3]) and (BinaryCod[2])
+			MinorCoD := "Set-top box"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and (BinaryCod[5]) and !(BinaryCod[4]) and (BinaryCod[3]) and !(BinaryCod[2])
+			MinorCoD := "HiFi Audio Device"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and (BinaryCod[5]) and !(BinaryCod[4]) and (BinaryCod[3]) and (BinaryCod[2])
+			MinorCoD := "VCR"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and (BinaryCod[5]) and (BinaryCod[4]) and !(BinaryCod[3]) and !(BinaryCod[2])
+			MinorCoD := "Video Camera"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and (BinaryCod[5]) and (BinaryCod[4]) and !(BinaryCod[3]) and (BinaryCod[2])
+			MinorCoD := "Camcorder"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and (BinaryCod[5]) and (BinaryCod[4]) and (BinaryCod[3]) and !(BinaryCod[2])
+			MinorCoD := "Video Monitor"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and (BinaryCod[5]) and (BinaryCod[4]) and (BinaryCod[3]) and (BinaryCod[2])
+			MinorCoD := "Video Display and Loudspeaker"
+		if !(BinaryCod[7]) and (BinaryCod[6]) and !(BinaryCod[5]) and !(BinaryCod[4]) and !(BinaryCod[3]) and !(BinaryCod[2])
+			MinorCoD := "Video Conferencing"
+		if !(BinaryCod[7]) and (BinaryCod[6]) and !(BinaryCod[5]) and !(BinaryCod[4]) and !(BinaryCod[3]) and (BinaryCod[2])
+			MinorCoD := "(Reserved)"
+		if !(BinaryCod[7]) and (BinaryCod[6]) and !(BinaryCod[5]) and !(BinaryCod[4]) and (BinaryCod[3]) and !(BinaryCod[2])
+			MinorCoD := "Gaming/Toy"
+		
+		MinorCoD := object("Class",MinorCoD)
+	}
+	if !(BinaryCod[12]) and !(BinaryCod[11]) and (BinaryCod[10]) and !(BinaryCod[9]) and (BinaryCod[8]) 
+	{
+		MajorCoD := object("Class","Peripheral")
+		isM := BinaryCod[7] ? 1 : 0
+		isK := BinaryCod[6] ? 1 : 0
+		
+		;if !(BinaryCod[5]) and !(BinaryCod[4]) and !(BinaryCod[3]) and !(BinaryCod[2])
+		MinorCoD := "Uncategorized"
+		if !(BinaryCod[5]) and !(BinaryCod[4]) and !(BinaryCod[3]) and (BinaryCod[2])
+			MinorCoD := "Joystick"
+		if !(BinaryCod[5]) and !(BinaryCod[4]) and (BinaryCod[3]) and !(BinaryCod[2])
+			MinorCoD := "Gamepad"
+		if !(BinaryCod[5]) and !(BinaryCod[4]) and (BinaryCod[3]) and (BinaryCod[2])
+			MinorCoD := "Remote control"
+		if !(BinaryCod[5]) and (BinaryCod[4]) and !(BinaryCod[3]) and !(BinaryCod[2])
+			MinorCoD := "Sensing device"
+		if !(BinaryCod[5]) and (BinaryCod[4]) and !(BinaryCod[3]) and (BinaryCod[2])
+			MinorCoD := "Digitizer tablet"
+		if !(BinaryCod[5]) and (BinaryCod[4]) and (BinaryCod[3]) and !(BinaryCod[2])
+			MinorCoD := "Card Reader (e.g. SIM Card Reader)"
+		
+		MinorCoD := object("Class",MinorCoD, "Mouse",isM, "Keyboard",isK)
+	}
+	if !(BinaryCod[12]) and !(BinaryCod[11]) and (BinaryCod[10]) and (BinaryCod[9]) and !(BinaryCod[8]) 
+	{
+		MajorCoD := object("Class","Imaging")
+		isDisplay := BinaryCod[4] ? 1 : 0
+		isCamera := BinaryCod[5] ? 1 : 0
+		isScanner := BinaryCod[6] ? 1 : 0
+		isPrinter := BinaryCod[7] ? 1 : 0
+
+		MinorCoD := object("Class","Imaging", "Display",isDisplay, "Camera",isCamera, "Scanner",isScanner, "Printer",isPrinter)	
+		
+	}
+	if !(BinaryCod[12]) and !(BinaryCod[11]) and (BinaryCod[10]) and (BinaryCod[9]) and (BinaryCod[8]) 
+	{
+		MajorCoD := object("Class","Wearable")
+		MinorCoD := "Undefined"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and !(BinaryCod[4]) and !(BinaryCod[3]) and (BinaryCod[2])
+			MinorCoD := "Wrist Watch"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and !(BinaryCod[4]) and (BinaryCod[3]) and !(BinaryCod[2])
+			MinorCoD := "Pager"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and !(BinaryCod[4]) and (BinaryCod[3]) and (BinaryCod[2])
+			MinorCoD := "Jacket"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and (BinaryCod[4]) and !(BinaryCod[3]) and !(BinaryCod[2])
+			MinorCoD := "Helmet"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and (BinaryCod[4]) and !(BinaryCod[3]) and (BinaryCod[2])
+			MinorCoD := "Glasses"	
+			
+		MinorCoD := object("Class",MinorCoD)
+	}
+	if !(BinaryCod[12]) and (BinaryCod[11]) and !(BinaryCod[10]) and !(BinaryCod[9]) and !(BinaryCod[8]) 
+	{
+		MajorCoD := object("Class","Toy")
+		MinorCoD := "Undefined"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and !(BinaryCod[4]) and !(BinaryCod[3]) and (BinaryCod[2])
+			MinorCoD := "Robot"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and !(BinaryCod[4]) and (BinaryCod[3]) and !(BinaryCod[2])
+			MinorCoD := "Vehicle"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and !(BinaryCod[4]) and (BinaryCod[3]) and (BinaryCod[2])
+			MinorCoD := "Doll / Action Figure"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and (BinaryCod[4]) and !(BinaryCod[3]) and !(BinaryCod[2])
+			MinorCoD := "Controller"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and (BinaryCod[4]) and !(BinaryCod[3]) and (BinaryCod[2])
+			MinorCoD := "Game"
+		
+		MinorCoD := object("Class",MinorCoD)
+	}
+	if !(BinaryCod[12]) and (BinaryCod[11]) and !(BinaryCod[10]) and !(BinaryCod[9]) and (BinaryCod[8]) 
+	{
+		MajorCoD := object("Class","Health")
+		;if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and !(BinaryCod[4]) and !(BinaryCod[3]) and !(BinaryCod[2])
+		MinorCoD := "Undefined"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and !(BinaryCod[4]) and !(BinaryCod[3]) and !(BinaryCod[2])
+			MinorCoD := "Blood Pressure Monitor"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and !(BinaryCod[4]) and !(BinaryCod[3]) and !(BinaryCod[2])
+			MinorCoD := "Thermometer"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and !(BinaryCod[4]) and !(BinaryCod[3]) and !(BinaryCod[2])
+			MinorCoD := "Weighing Scale"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and !(BinaryCod[4]) and !(BinaryCod[3]) and !(BinaryCod[2])
+			MinorCoD := "Glucose Meter"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and !(BinaryCod[4]) and !(BinaryCod[3]) and !(BinaryCod[2])
+			MinorCoD := "Pulse Oximeter"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and !(BinaryCod[4]) and !(BinaryCod[3]) and !(BinaryCod[2])
+			MinorCoD := "Heart/Pulse Rate Monitor"
+		if !(BinaryCod[7]) and !(BinaryCod[6]) and !(BinaryCod[5]) and !(BinaryCod[4]) and !(BinaryCod[3]) and !(BinaryCod[2])
+			MinorCoD := "Health Data Display"
+			
+		MinorCoD := object("Class",MinorCoD)
+	}
+	if (BinaryCod[12]) and (BinaryCod[11]) and (BinaryCod[10]) and (BinaryCod[9]) and (BinaryCod[8]) 
+	{
+		MajorCoD := object("Class","Uncategorized")
+		MinorCoD := object("Class","Undefined")
+	}
+	
+	
+	ThisCODObj.Major := MajorCoD
+	ThisCODObj.Minor := MinorCoD
+	ThisCODObj.ServiceClasses := ServiceClasses
+	return ThisCODObj
+}
 
 
 
