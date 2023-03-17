@@ -20,12 +20,12 @@ Badly made AHK Bluetooth library, Directly interacts with windows bluetooth apis
 
 ## Installation
 
-~~- Download AutoHotKey from above and Install it.~~
+~~- Download AutoHotKey from above and Install it.~~ 
 TODO: CLI interface when compiled
 
 # Usage
 
-`#include BadBTLib.ahk`
+`#include BadBTLib.ahk` 
 ~~BadBTLib.exe --some-command~~
 
 ## Roadmap
