@@ -62,7 +62,7 @@ https://github.com/ArchemedIan/BadBTLib/tree/main/Examples
 ;;;; This is how youll adress a specific device when dis/connecting or otherwise manipulating 
 ;;;; the status or services of a bluetooth device.
 ;;;;
-;;;; The variable name is the only required input, but may not work in all cases if theyre not 
+;;;; The variable name (Var, not Name) is the only required input, but may not work in all cases if theyre not 
 ;;;; all specified; and obviously wont work if none are, but it will still create an empty structure
 ;;;;
 ;;;; You should use BTDevInfo() to get the information required.
