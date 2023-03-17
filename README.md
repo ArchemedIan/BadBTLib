@@ -56,11 +56,14 @@ https://github.com/ArchemedIan/BadBTLib/tree/main/Examples
 
 
 ;; mkBTDevInfoSTRUCT(Var, Addr, Name, CoD)
-;;;; Creates a variable that refers to a (STRUCTured) space in memory that can be used by windows/C functions (i think thats what im doing??? lol)
+;;;; Creates a variable that refers to a (STRUCTured) space in memory that can be used by 
+;;;; windows/C functions (i think thats what im doing??? lol)
 ;;;;
-;;;; This is how youll adress a specific device when dis/connecting or otherwise manipulating the status or services of a bluetooth device.
+;;;; This is how youll adress a specific device when dis/connecting or otherwise manipulating 
+;;;; the status or services of a bluetooth device.
 ;;;;
-;;;; The variable name is the only required input, but may not work in all cases if theyre not all specified; and obviously wont work if none are, but it will still create an empty structure
+;;;; The variable name is the only required input, but may not work in all cases if theyre not 
+;;;; all specified; and obviously wont work if none are, but it will still create an empty structure
 ;;;;
 ;;;; You should use BTDevInfo() to get the information required.
 
