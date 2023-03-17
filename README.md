@@ -28,6 +28,8 @@ TODO: CLI interface when compiled
 
 ~~BadBTLib.exe --some-command~~
 
+https://github.com/ArchemedIan/BadBTLib/tree/main/Examples
+
 ```#include BadBTLib.ahk
 ;;;;;;;;;;			Funtion List			;;;;;;;;;;
 
