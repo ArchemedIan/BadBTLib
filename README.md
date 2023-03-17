@@ -68,7 +68,7 @@ https://github.com/ArchemedIan/BadBTLib/tree/main/Examples
 ;;;; You should use BTDevInfo() to get the information required.
 
 
-;; BTSetServiceState(OnOff, BTDevInfoSTRUCT, CLSID)
+;; BTSetServiceState(OnOff, BTDevInfoSTRUCT, CLSID)   ( THIS IS HOW YOU CONNECT DEVICES )
 ;;;; Change the state of a service by CLSID (google is your friend)
 ;;;;
 ;;;; On (1) off (0) or Toggle off then on (2)
