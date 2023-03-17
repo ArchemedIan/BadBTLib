@@ -26,7 +26,45 @@ TODO: CLI interface when compiled
 
 # Usage
 
-`#include BadBTLib.ahk` 
+```#include BadBTLib.ahk
+;;;;;;;;;;			Funtion List			;;;;;;;;;;
+
+;; BTFirstRadioInfo()
+;;;; Returns AHK Object of the First BT Radio AND its info, see example for usage
+
+
+;; BTDevList(Search_Params, Timeout)
+;;;; Returns AHK Object of BT devices AND their info, see example for usage, Search params, and what info is availible
+;;;;
+;;;; Default search parameters and timeout will instantly return all connected, authenticated and remembered devices, 
+;;;; and any unknown device windows is currently tracking
+;;;;
+;;;; Timeout is in multiples of 1.28 seconds, so a value of 5 is 6.4 seconds, blame microsoft. 
+
+
+;; BTDevInfo(NameOrAddr, Timeout)
+;;;; Returns AHK object of a single bluetooth devices info, see example for usage and what info is availible
+;;;;
+;;;; Will return any device found within the timeout, default Timeout is 0, which will usually only return 
+;;;; authenticated, remembered, and/or connected devices, but can also return unknown devices if the timing is right.
+;;;;
+;;;; Again, timeout is in multiples of 1.28 seconds, so a value of 5 is 6.4 seconds, blame microsoft.
+
+
+;; mkBTDevInfoSTRUCT(Var, Addr, Name, CoD)
+;;;; Creates a variable that refers to a (STRUCTured) space in memory that can be used by windows/C functions (i think thats what im doing??? lol)
+;;;;
+;;;; This is how youll adress a specific device when dis/connecting or otherwise manipulating the status or services of a bluetooth device.
+;;;;
+;;;; The variable name is the only required input, but may not work in all cases if theyre not all specified; and obviously wont work if none are, but it will still create an empty structure
+;;;;
+;;;; You should use BTDevInfo() to get the information required.
+
+
+;; BTSetServiceState(OnOff, BTDevInfoSTRUCT, CLSID)
+;;;; Change the state of a service by CLSID (google is your friend)
+;;;;
+;;;; On (1) off (0) or Toggle off then on (2)```
 
 ~~BadBTLib.exe --some-command~~
 
