@@ -1,9 +1,3 @@
-
-
-Global BadBTLib_Ver_Major := 1
-Global BadBTLib_Ver_Minor := 3
-VerChk()
-
 ;;;;;;;;;;			Funtion List			;;;;;;;;;;
 
 ;; BTFirstRadioInfo()
@@ -45,22 +39,39 @@ VerChk()
 
 
 
-;;;;;;;;;;			Functions			;;;;;;;;;;
 
-;;;;;;;; BTDev
+;init windows functions for speed
+Global BTFindFirstDevice := DllCall("GetProcAddress", "Ptr", DllCall("LoadLibrary", "str", "Bthprops.cpl", "ptr"), "AStr", "BluetoothFindFirstDevice", "Ptr") ;"Bthprops.cpl\BluetoothFindFirstDevice"
+Global BTFindNextDevice := DllCall("GetProcAddress", "Ptr", DllCall("GetModuleHandle", "Str", "Bthprops.cpl", "Ptr"), "AStr", "BluetoothFindNextDevice", "Ptr") ;"Bthprops.cpl\BluetoothFindNextDevice"
+Global BTFindDeviceClose := DllCall("GetProcAddress", "Ptr", DllCall("GetModuleHandle", "Str", "Bthprops.cpl", "Ptr"), "AStr", "BluetoothFindDeviceClose", "Ptr") ;"Bthprops.cpl\BluetoothFindDeviceClose"
+
+Global BTSetServiceState := DllCall("GetProcAddress", "Ptr", DllCall("GetModuleHandle", "Str", "Bthprops.cpl", "Ptr"), "AStr", "BluetoothSetServiceState", "Ptr") ;"Bthprops.cpl\BluetoothSetServiceState"
+
+Global CLSIDFromString := DllCall("GetProcAddress", "Ptr", DllCall("GetModuleHandle", "Str", "ole32", "Ptr"), "AStr", "CLSIDFromString", "Ptr") ;"ole32\CLSIDFromString"
+
+
+Global BadBTLib_Ver_Major := 1
+Global BadBTLib_Ver_Minor := 3
+VerChk()
+
+;;;;;;;;;;			Functions			;;;;;;;;;;
 
 BTFirstRadioInfo()
 {
 	ThisBtRadios := {}
-	;init lib 
-	DllCall("LoadLibrary", "str", "Bthprops.cpl", "ptr")
+	;Global 
+	BTFindFirstRadio := DllCall("GetProcAddress", "Ptr", DllCall("LoadLibrary", "str", "Bthprops.cpl", "ptr"), "AStr", "BluetoothFindFirstRadio", "Ptr") ;"Bthprops.cpl\BluetoothFindFirstRadio"
+	;Global 
+	BTGetRadioInfo := DllCall("GetProcAddress", "Ptr", DllCall("GetModuleHandle", "Str", "Bthprops.cpl", "Ptr"), "AStr", "BluetoothGetRadioInfo", "Ptr") ;"Bthprops.cpl\BluetoothGetRadioInfo"
+	;Global 
+	BTFindRadioClose := DllCall("GetProcAddress", "Ptr", DllCall("GetModuleHandle", "Str", "Bthprops.cpl", "Ptr"), "AStr", "BluetoothFindRadioClose", "Ptr") ;"Bthprops.cpl\BluetoothFindRadioClose"
 	
 	;init params struct	https://learn.microsoft.com/en-us/windows/win32/api/bluetoothapis/ns-bluetoothapis-bluetooth_find_radio_params
 	VarSetCapacity(BLUETOOTH_FIND_RADIO_PARAMS, 4, 0)
 	NumPut(4, BLUETOOTH_FIND_RADIO_PARAMS, 0, "uInt")
 		
 	;try (and fail?) to get handle	;https://learn.microsoft.com/en-us/windows/win32/api/bluetoothapis/nf-bluetoothapis-bluetoothfindfirstradio
-	hRadio := DllCall("Bthprops.cpl\BluetoothFindFirstRadio", "ptr", &BLUETOOTH_FIND_RADIO_PARAMS, "ptr*", BLUETOOTH_RADIO_HANDLE)
+	hRadio := DllCall(BTFindFirstRadio, "ptr", &BLUETOOTH_FIND_RADIO_PARAMS, "ptr*", BLUETOOTH_RADIO_HANDLE)
 	;msgbox % "Result: " BLUETOOTH_RADIO_HANDLE " EL: " ErrorLevel " LE: " A_LastError 
 	
 	;init info struct	https://learn.microsoft.com/en-us/windows/win32/api/bluetoothapis/ns-bluetoothapis-bluetooth_radio_info
@@ -69,7 +80,7 @@ BTFirstRadioInfo()
 	
 	;try and fail to fill info struct from handle	
 	;https://learn.microsoft.com/en-us/windows/win32/api/bluetoothapis/nf-bluetoothapis-bluetoothgetradioinfo
-	chk := DllCall("Bthprops.cpl\BluetoothGetRadioInfo", "ptr", BLUETOOTH_RADIO_HANDLE, "ptr", &BLUETOOTH_RADIO_INFO)
+	chk := DllCall(BTGetRadioInfo, "ptr", BLUETOOTH_RADIO_HANDLE, "ptr", &BLUETOOTH_RADIO_INFO)
 	;msgbox % "Result: " chk " EL: " ErrorLevel " LE: " A_LastError 
 	
 	;https://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes--0-499-
@@ -84,7 +95,7 @@ BTFirstRadioInfo()
 		ThisName = (no Radio name)
 	
 	ThisBtRadio := object("Name",ThisName, "Addr",ThisAddr, "CoD",ThisCoD, "SubVer",ThisSubVer, "Manufacturer",ThisManufacturer)
-	DllCall("Bthprops.cpl\BluetoothFindRadioClose", "ptr", foundedRadio)
+	DllCall(BTFindRadioClose, "ptr", foundedRadio)
 	Return ThisBtRadio
 }
 
@@ -93,16 +104,16 @@ BTDevList(Search_Params=15, Timeout=0)
 {
 	ThisBtDevices := {}
 	;https://learn.microsoft.com/en-us/windows/win32/api/bluetoothapis/ns-bluetoothapis-bluetooth_device_search_params
-	DllCall("LoadLibrary", "str", "Bthprops.cpl", "ptr")
+	
 	VarSetCapacity(BLUETOOTH_DEVICE_SEARCH_PARAMS, 24+A_PtrSize*2, 0)
 	NumPut(24+A_PtrSize*2, BLUETOOTH_DEVICE_SEARCH_PARAMS, 0, "uint")
 	
-	if (Search_Params > 31)
+	if (Search_Params > 15)
 		msgbox invalid BT search params, exiting...
-	if (Search_Params > 31)
+	if (Search_Params > 15)
 		ExitApp
 	if (Search_Params = 0)
-		Search_Params := 31
+		Search_Params := 15
 	
 	Search_Params_dec := Search_Params
 	
@@ -138,7 +149,7 @@ BTDevList(Search_Params=15, Timeout=0)
 	{
 		If (A_Index = 1)
 		{
-			foundedDevice := DllCall("Bthprops.cpl\BluetoothFindFirstDevice", "ptr", &BLUETOOTH_DEVICE_SEARCH_PARAMS, "ptr", &BLUETOOTH_DEVICE_INFO)
+			foundedDevice := DllCall(BTFindFirstDevice, "ptr", &BLUETOOTH_DEVICE_SEARCH_PARAMS, "ptr", &BLUETOOTH_DEVICE_INFO)
 			if !foundedDevice
 			{
 				;msgbox "No bluetooth radios found, or off"
@@ -147,7 +158,7 @@ BTDevList(Search_Params=15, Timeout=0)
 		}
 		else
 		{
-			if !DllCall("Bthprops.cpl\BluetoothFindNextDevice", "ptr", foundedDevice, "ptr", &BLUETOOTH_DEVICE_INFO)
+			if !DllCall(BTFindNextDevice, "ptr", foundedDevice, "ptr", &BLUETOOTH_DEVICE_INFO)
 			{
 				;msgbox "Device list end"
 				break
@@ -194,16 +205,15 @@ BTDevList(Search_Params=15, Timeout=0)
 		
 		ThisBtDevices[DevIndex] := object("Name",ThisName, "Addr",ThisAddr, "CoD",ThisCoD, "ConSts",ThisConSts, "RemSts",ThisRemSts, "AuthSts",ThisAuthSts, "LSeen",ThisLSeen, "LUsed",ThisLUsed)
 	}
-	DllCall("Bthprops.cpl\BluetoothFindDeviceClose", "ptr", foundedDevice)
+	DllCall(BTFindDeviceClose, "ptr", foundedDevice)
 	;msgbox % nameList
 	Return ThisBtDevices
 }
 
-BTDevInfo(NameOrAddr,Timeout=0)
+BTDevInfo(NameOrAddr, Timeout=0)
 {
 	ThisBtDevice := {}
 	;https://learn.microsoft.com/en-us/windows/win32/api/bluetoothapis/ns-bluetoothapis-bluetooth_device_search_params
-	DllCall("LoadLibrary", "str", "Bthprops.cpl", "ptr")
 	VarSetCapacity(BLUETOOTH_DEVICE_SEARCH_PARAMS, 24+A_PtrSize*2, 0)
 	NumPut(24+A_PtrSize*2, BLUETOOTH_DEVICE_SEARCH_PARAMS, 0, "uint")
 
@@ -231,7 +241,7 @@ BTDevInfo(NameOrAddr,Timeout=0)
 	{
 		If (A_Index = 1)
 		{
-			foundedDevice := DllCall("Bthprops.cpl\BluetoothFindFirstDevice", "ptr", &BLUETOOTH_DEVICE_SEARCH_PARAMS, "ptr", &BLUETOOTH_DEVICE_INFO)
+			foundedDevice := DllCall(BTFindFirstDevice, "ptr", &BLUETOOTH_DEVICE_SEARCH_PARAMS, "ptr", &BLUETOOTH_DEVICE_INFO)
 			if !foundedDevice
 			{
 				;msgbox "No bluetooth radios found, or off"
@@ -240,7 +250,7 @@ BTDevInfo(NameOrAddr,Timeout=0)
 		}
 		else
 		{
-			if !DllCall("Bthprops.cpl\BluetoothFindNextDevice", "ptr", foundedDevice, "ptr", &BLUETOOTH_DEVICE_INFO)
+			if !DllCall(BTFindNextDevice, "ptr", foundedDevice, "ptr", &BLUETOOTH_DEVICE_INFO)
 			{
 				;msgbox "Device list end"
 				break
@@ -291,7 +301,7 @@ BTDevInfo(NameOrAddr,Timeout=0)
 			ThisName = (no device name)
 		
 		ThisBtDevice := object("Name",ThisName, "Addr",ThisAddr, "CoD",ThisCoD, "ConSts",ThisConSts, "RemSts",ThisRemSts, "AuthSts",ThisAuthSts, "LSeen",ThisLSeen, "LUsed",ThisLUsed)
-		DllCall("Bthprops.cpl\BluetoothFindDeviceClose", "ptr", foundedDevice)
+		DllCall(BTFindDeviceClose, "ptr", foundedDevice)
 		;msgbox % nameList
 		Return ThisBtDevice
 	}
@@ -344,7 +354,7 @@ BTSetServiceState(OnOff, ByRef BTDevInfoSTRUCT, CLSID="{00001124-0000-1000-8000-
 {
 
 			VarSetCapacity(ThisCLSID, 16)
-			DllCall("ole32\CLSIDFromString", "wstr", CLSID, "ptr", &ThisCLSID)
+			DllCall(CLSIDFromString, "wstr", CLSID, "ptr", &ThisCLSID)
 			
 			if (OnOff = 0)
 				TogOff := 1
@@ -362,7 +372,7 @@ BTSetServiceState(OnOff, ByRef BTDevInfoSTRUCT, CLSID="{00001124-0000-1000-8000-
 			{
 				tries += 1
 				if (TogOff = 1) and (ToggedOff != 1)
-					ServiceOff := DllCall("Bthprops.cpl\BluetoothSetServiceState", "ptr", 0, "ptr", &BTDevInfoSTRUCT, "ptr", &ThisCLSID, "int", 0) 
+					ServiceOff := DllCall(BTSetServiceState, "ptr", 0, "ptr", &BTDevInfoSTRUCT, "ptr", &ThisCLSID, "int", 0) 
 					
 				if (ServiceOff = 0)
 					ToggedOff := 1
@@ -371,7 +381,7 @@ BTSetServiceState(OnOff, ByRef BTDevInfoSTRUCT, CLSID="{00001124-0000-1000-8000-
 					Continue
 			
 				if (TogOn = 1) (ToggedOn != 1)
-					ServiceOn := DllCall("Bthprops.cpl\BluetoothSetServiceState", "ptr", 0, "ptr", &BTDevInfoSTRUCT, "ptr", &ThisCLSID, "int", 1)
+					ServiceOn := DllCall(BTSetServiceState, "ptr", 0, "ptr", &BTDevInfoSTRUCT, "ptr", &ThisCLSID, "int", 1)
 					
 				if (ServiceOn = 0)
 					ToggedOn := 1

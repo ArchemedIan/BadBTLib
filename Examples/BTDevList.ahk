@@ -11,11 +11,11 @@ FileDelete, BTDevList.txt
 
 ;###### SEARCH PARAMS HOWTO #######
 
-the search params are implemented in the same way things lik msgbox's options. https://www.autohotkey.com/docs/v1/lib/MsgBox.htm#Group_1_Buttons
+;the search params are implemented in the same way things lik msgbox's options. https://www.autohotkey.com/docs/v1/lib/MsgBox.htm#Group_1_Buttons
 
-if you want an option, you add the value of that option to the rest of the options you want.
+;if you want an option, you add the value of that option to the rest of the options you want.
 
-there are 4 options;  
+;there are 4 options;  
 
 ;::::Option:::::::::::Value:::::::::Description
 ReturnAuthenticated := 	1		;This option will return any paired device
@@ -32,7 +32,7 @@ Params	:= 15	;Return All
 
 ;###### Usage Example #######
 
-BtDevices := BTDevList(Params, 8) ;return bt devices based on %params% found in 10.24 8 x 1.28) seconds (and their infos) 
+BtDevices := BTDevList(Params, 2) ;return bt devices based on %params% found in 10.24 8 x 1.28) seconds (and their infos) 
 
 
 NumOfDevices := BtDevices.Length() ;Store infos 
