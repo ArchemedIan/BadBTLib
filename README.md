@@ -18,13 +18,15 @@ Badly made AHK Bluetooth library, Directly interacts with windows bluetooth apis
 - Bluetooth On
 - [*Current* AHK](https://www.autohotkey.com/download/ahk-install.exe) **Not version 2**
 
-## Installation
+## Compilation
 
 ~~- Download AutoHotKey from above and Install it.~~ 
 
 TODO: CLI interface when compiled
 
 # Usage
+
+~~BadBTLib.exe --some-command~~
 
 ```#include BadBTLib.ahk
 ;;;;;;;;;;			Funtion List			;;;;;;;;;;
@@ -64,9 +66,9 @@ TODO: CLI interface when compiled
 ;; BTSetServiceState(OnOff, BTDevInfoSTRUCT, CLSID)
 ;;;; Change the state of a service by CLSID (google is your friend)
 ;;;;
-;;;; On (1) off (0) or Toggle off then on (2)```
+;;;; On (1) off (0) or Toggle off then on (2)
 
-~~BadBTLib.exe --some-command~~
+```
 
 ## Roadmap
 
