@@ -69,6 +69,10 @@ https://github.com/ArchemedIan/BadBTLib/tree/main/Examples
 ;;;; You should use BTDevInfo() to get the information required.
 
 
+;; BTUpdateDevName(NewName, Addr)
+;;;; Changes display name of a device by address
+
+
 ;; BTSetServiceState(OnOff, BTDevInfoSTRUCT, CLSID)   ( THIS IS HOW YOU CONNECT DEVICES )
 ;;;; Change the state of a service by CLSID (google is your friend)
 ;;;;
