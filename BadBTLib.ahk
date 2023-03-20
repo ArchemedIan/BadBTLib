@@ -1,3 +1,5 @@
+Global BadBTLib_Ver_Major := 2
+Global BadBTLib_Ver_Minor := 0
 ;;;;;;;;;;			Funtion List			;;;;;;;;;;
 
 ;; BTFirstRadioInfo()
@@ -32,31 +34,34 @@
 ;;;; You should use BTDevInfo() to get the information required.
 
 
+;; BTUpdateDevName(NewName, Addr)
+;;;; Changes display name of a device by address
+
+
 ;; BTSetServiceState(OnOff, BTDevInfoSTRUCT, CLSID)
 ;;;; Change the state of a service by CLSID (google is your friend)
 ;;;;
 ;;;; On (1) off (0) or Toggle off then on (2)
 
 
+;init windows functions for speed, unload on exit
+Global hBTProps := DllCall("LoadLibrary", "str", "Bthprops.cpl", "ptr")
+if !(KeepBadBTOnExit)
+	OnExit("unloadBadBT", 1)
+
+unloadBadBT(ExitReason, ExitCode)
+{
+	DllCall("FreeLibrary", "Ptr", hBTProps)
+	Return 0
+}
 
 
-;init windows functions for speed
-Global BTFindFirstDevice := DllCall("GetProcAddress", "Ptr", DllCall("LoadLibrary", "str", "Bthprops.cpl", "ptr"), "AStr", "BluetoothFindFirstDevice", "Ptr") ;"Bthprops.cpl\BluetoothFindFirstDevice"
-Global BTFindNextDevice := DllCall("GetProcAddress", "Ptr", DllCall("GetModuleHandle", "Str", "Bthprops.cpl", "Ptr"), "AStr", "BluetoothFindNextDevice", "Ptr") ;"Bthprops.cpl\BluetoothFindNextDevice"
-Global BTFindDeviceClose := DllCall("GetProcAddress", "Ptr", DllCall("GetModuleHandle", "Str", "Bthprops.cpl", "Ptr"), "AStr", "BluetoothFindDeviceClose", "Ptr") ;"Bthprops.cpl\BluetoothFindDeviceClose"
 
-Global BTSetServiceState := DllCall("GetProcAddress", "Ptr", DllCall("GetModuleHandle", "Str", "Bthprops.cpl", "Ptr"), "AStr", "BluetoothSetServiceState", "Ptr") ;"Bthprops.cpl\BluetoothSetServiceState"
-
-Global CLSIDFromString := DllCall("GetProcAddress", "Ptr", DllCall("GetModuleHandle", "Str", "ole32", "Ptr"), "AStr", "CLSIDFromString", "Ptr") ;"ole32\CLSIDFromString"
-
-
-Global BadBTLib_Ver_Major := 1
-Global BadBTLib_Ver_Minor := 3
 VerChk()
 
 ;;;;;;;;;;			Functions			;;;;;;;;;;
 
-BTFirstRadioInfo()
+BTFirstRadioInfo(ReturnHandle=0)
 {
 	ThisBtRadios := {}
 	;Global 
@@ -73,6 +78,9 @@ BTFirstRadioInfo()
 	;try (and fail?) to get handle	;https://learn.microsoft.com/en-us/windows/win32/api/bluetoothapis/nf-bluetoothapis-bluetoothfindfirstradio
 	hRadio := DllCall(BTFindFirstRadio, "ptr", &BLUETOOTH_FIND_RADIO_PARAMS, "ptr*", BLUETOOTH_RADIO_HANDLE)
 	;msgbox % "Result: " BLUETOOTH_RADIO_HANDLE " EL: " ErrorLevel " LE: " A_LastError 
+	
+	if (ReturnHandle)
+		Return &BLUETOOTH_RADIO_HANDLE
 	
 	;init info struct	https://learn.microsoft.com/en-us/windows/win32/api/bluetoothapis/ns-bluetoothapis-bluetooth_radio_info
 	VarSetCapacity(BLUETOOTH_RADIO_INFO, 520, 0)
@@ -102,6 +110,14 @@ BTFirstRadioInfo()
 
 BTDevList(Search_Params=15, Timeout=0)
 {
+	;if !(BTFindFirstDevice)
+		BTFindFirstDevice := DllCall("GetProcAddress", "Ptr", hBTProps, "AStr", "BluetoothFindFirstDevice", "Ptr") ;"Bthprops.cpl\BluetoothFindFirstDevice"
+	;if !(BTFindNextDevice)
+		BTFindNextDevice := DllCall("GetProcAddress", "Ptr", hBTProps, "AStr", "BluetoothFindNextDevice", "Ptr") ;"Bthprops.cpl\BluetoothFindNextDevice"
+	;if !(BTFindDeviceClose)
+		BTFindDeviceClose := DllCall("GetProcAddress", "Ptr", hBTProps, "AStr", "BluetoothFindDeviceClose", "Ptr") ;"Bthprops.cpl\BluetoothFindDeviceClose"
+		
+		
 	ThisBtDevices := {}
 	;https://learn.microsoft.com/en-us/windows/win32/api/bluetoothapis/ns-bluetoothapis-bluetooth_device_search_params
 	
@@ -212,6 +228,13 @@ BTDevList(Search_Params=15, Timeout=0)
 
 BTDevInfo(NameOrAddr, Timeout=0)
 {
+	if !(BTFindFirstDevice)
+		BTFindFirstDevice := DllCall("GetProcAddress", "Ptr", hBTProps, "AStr", "BluetoothFindFirstDevice", "Ptr") ;"Bthprops.cpl\BluetoothFindFirstDevice"
+	if !(BTFindNextDevice)
+		BTFindNextDevice := DllCall("GetProcAddress", "Ptr", hBTProps, "AStr", "BluetoothFindNextDevice", "Ptr") ;"Bthprops.cpl\BluetoothFindNextDevice"
+	if !(BTFindDeviceClose)
+		BTFindDeviceClose := DllCall("GetProcAddress", "Ptr", hBTProps, "AStr", "BluetoothFindDeviceClose", "Ptr") ;"Bthprops.cpl\BluetoothFindDeviceClose"
+	
 	ThisBtDevice := {}
 	;https://learn.microsoft.com/en-us/windows/win32/api/bluetoothapis/ns-bluetoothapis-bluetooth_device_search_params
 	VarSetCapacity(BLUETOOTH_DEVICE_SEARCH_PARAMS, 24+A_PtrSize*2, 0)
@@ -314,106 +337,94 @@ mkBTDevInfoSTRUCT(ByRef var,Addr,Name="",CoD="")
 	szName := Name
 	Address := Mac2Dec(Addr)
 	ulClassofDevice := CoD
-	;fConnected
-	;fRemembered
-	;fAuthenticated
-	;stLastSeen
-	;stLastUsed
 
 	VarSetCapacity(var, dwSize, 0)
-	NumPut(dwSize, var, 0, "UInt")
+	NumPut(dwSize, &var, 0, "UInt")
 	
-
-	NumPut(Address, var, 8, "Ptr")
-	NumPut(ulClassofDevice, var, 16, "UInt")
-	;NumPut(fConnected, BLUETOOTH_DEVICE_INFO_STRUCT, 20, "Int")
-	;NumPut(fRemembered, BLUETOOTH_DEVICE_INFO_STRUCT, 24, "Int")
-	;NumPut(fAuthenticated, BLUETOOTH_DEVICE_INFO_STRUCT, 28, "Int")
-	;NumPut(stLastSeen, BLUETOOTH_DEVICE_INFO_STRUCT, 32, "Ptr")
-	;NumPut(stLastUsed, BLUETOOTH_DEVICE_INFO_STRUCT, 48, "Ptr")
-
-;Name
-	;plan0
 	StrPut(szName, &var + 64, 248)
+	NumPut(Address, var, 8, "Ptr")
+	NumPut(ulClassofDevice, &var, 16, "UInt")
 	
-	
-	;Plan A.
-	;StrPut(szName, &var + 64, 248, "UTF-16")
-	
-	
-	; Plan B. Try this if Plan A fails.
-	; szName := "Put your string here."
-	; StrPutVar(szName, Pointer_szName, "UTF-16")
-	; NumPut(&Pointer_szName, BLUETOOTH_DEVICE_INFO_STRUCT, 64, "Ptr")
-	
-	
+	return 
+}
+
+BTUpdateDevName(NewName, Addr)
+{
+	BTUpdateDeviceRecord := DllCall("GetProcAddress", "Ptr", hBTProps, "AStr", "BluetoothUpdateDeviceRecord", "Ptr") ;"Bthprops.cpl\BluetoothUpdateDeviceRecord"
+	mkBTDevInfoSTRUCT(hpStruct, Addr, NewName)
+	DllCall(BTUpdateDeviceRecord, "ptr", &hpStruct, "ptr")
 	return 
 }
 
 BTSetServiceState(OnOff, ByRef BTDevInfoSTRUCT, CLSID="{00001124-0000-1000-8000-00805F9B34FB}")
 {
+	if !(BTSetServiceState)
+		BTSetServiceState := DllCall("GetProcAddress", "Ptr", hBTProps, "AStr", "BluetoothSetServiceState", "Ptr") ;"Bthprops.cpl\BluetoothSetServiceState"
+	if !(CLSIDFromString)
+		CLSIDFromString := DllCall("GetProcAddress", "Ptr", DllCall("GetModuleHandle", "Str", "ole32", "Ptr"), "AStr", "CLSIDFromString", "Ptr") ;"ole32\CLSIDFromString"
 
-			VarSetCapacity(ThisCLSID, 16)
-			DllCall(CLSIDFromString, "wstr", CLSID, "ptr", &ThisCLSID)
+	VarSetCapacity(ThisCLSID, 16)
+	DllCall(CLSIDFromString, "wstr", CLSID, "ptr", &ThisCLSID)
+	
+	if (OnOff = 0)
+		TogOff := 1
+		
+	if (OnOff = 1)
+		TogOn := 1	
+	
+	if (OnOff = 2)
+	{
+		TogOff := 1
+		TogOn := 1
+	}	
+	
+	loop
+	{
+		tries += 1
+		if (TogOff = 1) and (ToggedOff != 1)
+			ServiceOff := DllCall(BTSetServiceState, "ptr", 0, "ptr", &BTDevInfoSTRUCT, "ptr", &ThisCLSID, "int", 0) 
 			
-			if (OnOff = 0)
-				TogOff := 1
-				
-			if (OnOff = 1)
-				TogOn := 1	
+		if (ServiceOff = 0)
+			ToggedOff := 1
 			
-			if (OnOff = 2)
-			{
-				TogOff := 1
-				TogOn := 1
-			}	
+		if (ToggedOff != 1) and (tries < 500)
+			Continue
+	
+		if (TogOn = 1) (ToggedOn != 1)
+			ServiceOn := DllCall(BTSetServiceState, "ptr", 0, "ptr", &BTDevInfoSTRUCT, "ptr", &ThisCLSID, "int", 1)
 			
-			loop
-			{
-				tries += 1
-				if (TogOff = 1) and (ToggedOff != 1)
-					ServiceOff := DllCall(BTSetServiceState, "ptr", 0, "ptr", &BTDevInfoSTRUCT, "ptr", &ThisCLSID, "int", 0) 
-					
-				if (ServiceOff = 0)
-					ToggedOff := 1
-					
-				if (ToggedOff != 1) and (tries < 500)
-					Continue
+		if (ServiceOn = 0)
+			ToggedOn := 1
 			
-				if (TogOn = 1) (ToggedOn != 1)
-					ServiceOn := DllCall(BTSetServiceState, "ptr", 0, "ptr", &BTDevInfoSTRUCT, "ptr", &ThisCLSID, "int", 1)
-					
-				if (ServiceOn = 0)
-					ToggedOn := 1
-					
-				if (ToggedOn = 1)
-					break
-				
-				if (tries > 500)
-					Return 500
-			}
-			Return 0
+		if (ToggedOn = 1)
+			break
+		
+		if (tries > 500)
+			Return 500
+	}
+	Return 0
 }
 
 
 
 CoD2Obj(DecimalCoD)
 {
+	BinaryCoDRaw := Bin(DecimalCoD)
 	BinaryCod := {}
 	ThisCoDObj := {}
 	ServiceClasses := {}
 	
-	binlen := StrLen(DecimalCoD)
+	binlen := StrLen(BinaryCoDRaw)
 	pad := 24 - binlen
 	if (binlen < 24)
 		loop %pad%
 			padin := "0" padin
-	DecimalCoD := padin . DecimalCoD
-	binlen := StrLen(DecimalCoD)
-	;msgbox % DecimalCoD
+	BinaryCoDRaw := padin . BinaryCoDRaw
+	binlen := StrLen(BinaryCoDRaw)
+	;msgbox % BinaryCoDRaw
 	Loop 24
 	{
-		bit := SubStr(DecimalCoD, -(A_Index-1), 1)
+		bit := SubStr(BinaryCoDRaw, -(A_Index-1), 1)
 		;BinaryCod.Push(bit)
 		BinaryCod.InsertAt(A_Index-1, bit)
 		;msgbox % "bit" A_Index-1 ": " bit

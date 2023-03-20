@@ -3,8 +3,8 @@ SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 #Persistent ;Keeps script open
 #SingleInstance Force
 
-Global BadBTLib_Req_Major := 0
-Global BadBTLib_Req_Minor := 1
+Global BadBTLib_Req_Major := 2
+Global BadBTLib_Req_Minor := 0
 #include ..\BadBTLib.ahk
 FileDelete, BTDevList.txt
 
@@ -49,7 +49,7 @@ loop %NumOfDevices%
 	IniWrite,% BtDevices[A_Index].LSeen, BTDevList.txt, Device%Devnum%, LSeen
 	IniWrite,% BtDevices[A_Index].LUsed, BTDevList.txt, Device%Devnum%, LUsed
 	
-	CoDObj := CoD2Obj(Bin(BtDevices[A_Index].CoD))	
+	CoDObj := CoD2Obj(BtDevices[A_Index].CoD)	
 	
 	IniWrite,% CoDObj.ServiceClasses.LimitedDiscoverableMode ? "On" : "Off", BTDevList.txt, Device%Devnum%, LimitedDiscoverableMode 
 	IniWrite,% CoDObj.ServiceClasses.Positioning ? "Yes" : "No", BTDevList.txt, Device%Devnum%, Positioning services

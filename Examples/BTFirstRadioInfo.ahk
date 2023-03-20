@@ -6,8 +6,8 @@ SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 
 
 
-Global BadBTLib_Req_Major := 1
-Global BadBTLib_Req_Minor := 3
+Global BadBTLib_Req_Major := 2
+Global BadBTLib_Req_Minor := 0
 #include ..\BadBTLib.ahk
 
 
@@ -25,7 +25,7 @@ Manufacturer	:= BtRadio.Manufacturer
 
 info :=	"Name: " Name "`nAddr: " Addr "`nSubVer: " SubVer "`nManufacturer: " Manufacturer
 
-CoDObj := CoD2Obj(Bin(CoD))	
+CoDObj := CoD2Obj(CoD)	
 s1 := CoDObj.ServiceClasses.LimitedDiscoverableMode ? "Yes" : "No"
 s2 := CoDObj.ServiceClasses.Positioning ? "Yes" : "No"
 s3 := CoDObj.ServiceClasses.Networking ? "Yes" : "No"

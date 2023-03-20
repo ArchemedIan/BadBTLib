@@ -7,11 +7,13 @@ DllCall(QPF, "Int64*", freq)
 
 ;start := A_TickCount
 DllCall(QPC, "Int64*", startLoadLib)
-SetWorkingDir %A_ScriptDir%   
+SetWorkingDir %A_ScriptDir% 
+Global BadBTLib_Req_Major := 2
+Global BadBTLib_Req_Minor := 0
 #include ..\BadBTLib.ahk
 DllCall(QPC, "Int64*", endLoadLib)
 DllCall(QPC, "Int64*", start)
-BTDevList := BTDevList(15, 0)
+BTDevList := BTDevList(1, 0)
 NumOfDevices := BTDevList.Length()  
 loop %NumOfDevices%
 	devs := devs BtDevList[A_Index].Name " Connected: " (BtDevList[A_Index].ConSts  ? "Yes`n" : "No`n")

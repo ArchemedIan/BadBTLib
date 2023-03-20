@@ -7,7 +7,8 @@ Badly made AHK Bluetooth library, Directly interacts with windows bluetooth apis
 
 ## What This Does
 
-- Get first Radio (BT adapter) and their its info (need more adapters to test and implement full list) 
+- Change name of (some) bluetooth devices (you'll have to toggle bluetooth off and on to see change)
+- Get first Radio (BT adapter) and their its info (need more adapters to test and implement a full list) 
 - List Bluetooth devices (by parameter) and their infos
 - connect and disconnect BT devices (open and close services of a bluetooth device by CLSID)
 - interact with windows bluetooth quicker than any other method ive found

@@ -3,8 +3,8 @@ SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 #Persistent ;Keeps script open
 #SingleInstance Force
 
-Global BadBTLib_Req_Major := 1
-Global BadBTLib_Req_Minor := 3
+Global BadBTLib_Req_Major := 2
+Global BadBTLib_Req_Minor := 0
 #include ..\BadBTLib.ahk
 FileDelete, BTDevInfo.txt
 
@@ -18,7 +18,7 @@ BtDevice := BTDevInfo(NameOrAddr, 25) ; for 32 seconds (25 x 1.28)
 Name 	:= BtDevice.Name
 Addr 	:= BtDevice.Addr
 CoD 	:= BtDevice.CoD
-CoDObj	:= CoD2Obj(Bin(CoD))
+CoDObj	:= CoD2Obj(CoD)
 ConSts 	:= BtDevice.ConSts
 RemSts 	:= BtDevice.RemSts
 AuthSts := BtDevice.AuthSts
@@ -46,14 +46,14 @@ if (CoDObj.Major.Class = "LAN" or CoDObj.Major.Class = "Peripheral" or CoDObj.Ma
 	if (CoDObj.Major.Class = "LAN")
 	{
 		isAvail := CoDObj.Minor.Available ? "Yes" : "No"
-		CoDinfo := CoDinfo "`nLAN info:`n`nAvailable: " isAvail "`nUtilizationLevel: " CoDObj.Minor.UtilizationLevel
+		CoDinfo := CoDinfo "`nLAN info:`nAvailable: " isAvail "`nUtilizationLevel: " CoDObj.Minor.UtilizationLevel
 	}
 
 	if (CoDObj.Major.Class = "Peripheral")
 	{
 		isM := CoDObj.Minor.Mouse ? "Yes" : "No"
 		isK := CoDObj.Minor.Keyboard ? "Yes" : "No"
-		CoDinfo := CoDinfo "`nPeripheral (" CoDObj.Minor.Class ") info:`n" "`nMouse: " isM "`nKeyboard: " isK
+		CoDinfo := CoDinfo "`nPeripheral (" CoDObj.Minor.Class ") info:" "`nMouse: " isM "`nKeyboard: " isK
 	}
 	
 	if (CoDObj.Major.Class = "Imaging")
@@ -64,7 +64,7 @@ if (CoDObj.Major.Class = "LAN" or CoDObj.Major.Class = "Peripheral" or CoDObj.Ma
 		isPrinter := CoDObj.Minor.Printer ? "Yes" : "No"
 		CoDinfo := CoDinfo "`nImaging info:`n" "`nDisplay: " isDisplay "`nCamera: " isCamera "`nScanner: " isScanner "`nPrinter: " isPrinter
 	}
-
+}
 FileAppend , % info "`n" Servicesinfo "`n" CoDinfo, %A_ScriptDir%\BTDevInfo.txt
 
 ExitApp
