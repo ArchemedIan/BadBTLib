@@ -57,42 +57,30 @@ unloadBadBT(ExitReason, ExitCode)
 
 
 
-VerChk()
+BadBTVerChk()
 
 ;;;;;;;;;;			Functions			;;;;;;;;;;
 
 BTFirstRadioInfo(ReturnHandle=0)
 {
 	ThisBtRadios := {}
-	;Global 
 	BTFindFirstRadio := DllCall("GetProcAddress", "Ptr", DllCall("LoadLibrary", "str", "Bthprops.cpl", "ptr"), "AStr", "BluetoothFindFirstRadio", "Ptr") ;"Bthprops.cpl\BluetoothFindFirstRadio"
-	;Global 
 	BTGetRadioInfo := DllCall("GetProcAddress", "Ptr", DllCall("GetModuleHandle", "Str", "Bthprops.cpl", "Ptr"), "AStr", "BluetoothGetRadioInfo", "Ptr") ;"Bthprops.cpl\BluetoothGetRadioInfo"
-	;Global 
 	BTFindRadioClose := DllCall("GetProcAddress", "Ptr", DllCall("GetModuleHandle", "Str", "Bthprops.cpl", "Ptr"), "AStr", "BluetoothFindRadioClose", "Ptr") ;"Bthprops.cpl\BluetoothFindRadioClose"
 	
-	;init params struct	https://learn.microsoft.com/en-us/windows/win32/api/bluetoothapis/ns-bluetoothapis-bluetooth_find_radio_params
 	VarSetCapacity(BLUETOOTH_FIND_RADIO_PARAMS, 4, 0)
 	NumPut(4, BLUETOOTH_FIND_RADIO_PARAMS, 0, "uInt")
-		
-	;try (and fail?) to get handle	;https://learn.microsoft.com/en-us/windows/win32/api/bluetoothapis/nf-bluetoothapis-bluetoothfindfirstradio
+
 	hRadio := DllCall(BTFindFirstRadio, "ptr", &BLUETOOTH_FIND_RADIO_PARAMS, "ptr*", BLUETOOTH_RADIO_HANDLE)
-	;msgbox % "Result: " BLUETOOTH_RADIO_HANDLE " EL: " ErrorLevel " LE: " A_LastError 
-	
+
 	if (ReturnHandle)
 		Return &BLUETOOTH_RADIO_HANDLE
 	
-	;init info struct	https://learn.microsoft.com/en-us/windows/win32/api/bluetoothapis/ns-bluetoothapis-bluetooth_radio_info
 	VarSetCapacity(BLUETOOTH_RADIO_INFO, 520, 0)
 	NumPut(520, BLUETOOTH_RADIO_INFO, 0, "uint")
 	
-	;try and fail to fill info struct from handle	
-	;https://learn.microsoft.com/en-us/windows/win32/api/bluetoothapis/nf-bluetoothapis-bluetoothgetradioinfo
 	chk := DllCall(BTGetRadioInfo, "ptr", BLUETOOTH_RADIO_HANDLE, "ptr", &BLUETOOTH_RADIO_INFO)
-	;msgbox % "Result: " chk " EL: " ErrorLevel " LE: " A_LastError 
-	
-	;https://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes--0-499-
-	
+
 	ThisAddr := NumGet(&BLUETOOTH_RADIO_INFO, 8, "int64")
 	ThisAddr :=	Dec2Mac(ThisAddr) ;msgbox % ThisAddr
 	ThisName := StrGet(&BLUETOOTH_RADIO_INFO + 16, 248) ;MsgBox % ThisName
@@ -110,16 +98,11 @@ BTFirstRadioInfo(ReturnHandle=0)
 
 BTDevList(Search_Params=15, Timeout=0)
 {
-	;if !(BTFindFirstDevice)
-		BTFindFirstDevice := DllCall("GetProcAddress", "Ptr", hBTProps, "AStr", "BluetoothFindFirstDevice", "Ptr") ;"Bthprops.cpl\BluetoothFindFirstDevice"
-	;if !(BTFindNextDevice)
-		BTFindNextDevice := DllCall("GetProcAddress", "Ptr", hBTProps, "AStr", "BluetoothFindNextDevice", "Ptr") ;"Bthprops.cpl\BluetoothFindNextDevice"
-	;if !(BTFindDeviceClose)
-		BTFindDeviceClose := DllCall("GetProcAddress", "Ptr", hBTProps, "AStr", "BluetoothFindDeviceClose", "Ptr") ;"Bthprops.cpl\BluetoothFindDeviceClose"
-		
-		
+	BTFindFirstDevice := DllCall("GetProcAddress", "Ptr", hBTProps, "AStr", "BluetoothFindFirstDevice", "Ptr") ;"Bthprops.cpl\BluetoothFindFirstDevice"
+	BTFindNextDevice := DllCall("GetProcAddress", "Ptr", hBTProps, "AStr", "BluetoothFindNextDevice", "Ptr") ;"Bthprops.cpl\BluetoothFindNextDevice"
+	BTFindDeviceClose := DllCall("GetProcAddress", "Ptr", hBTProps, "AStr", "BluetoothFindDeviceClose", "Ptr") ;"Bthprops.cpl\BluetoothFindDeviceClose"
+	
 	ThisBtDevices := {}
-	;https://learn.microsoft.com/en-us/windows/win32/api/bluetoothapis/ns-bluetoothapis-bluetooth_device_search_params
 	
 	VarSetCapacity(BLUETOOTH_DEVICE_SEARCH_PARAMS, 24+A_PtrSize*2, 0)
 	NumPut(24+A_PtrSize*2, BLUETOOTH_DEVICE_SEARCH_PARAMS, 0, "uint")
@@ -133,12 +116,11 @@ BTDevList(Search_Params=15, Timeout=0)
 	
 	Search_Params_dec := Search_Params
 	
-	Search_Params_bin := Bin(Search_Params_dec)
+	Search_Params_bin := BadBTBin(Search_Params_dec)
 
 	Search_Params := ""
 	Search_Params := {}
-	
-	
+
 	loop % StrLen(Search_Params_bin)
 	{
 		Search_Params[A_Index] := SubStr(Search_Params_bin, A_Index * -1 , 1)
@@ -147,9 +129,7 @@ BTDevList(Search_Params=15, Timeout=0)
 	ReturnRemembered := Search_Params[2]
 	ReturnUnknown := Search_Params[3]
 	ReturnConnected := Search_Params[4]
-	;IssueInquiry := Search_Params[5]
 	IssueInquiry := Timeout > 0 ? 1 : 0
-	
 	
 	NumPut(ReturnAuthenticated, BLUETOOTH_DEVICE_SEARCH_PARAMS, 4, "uint") ; fReturnAuthenticated
 	NumPut(ReturnRemembered, BLUETOOTH_DEVICE_SEARCH_PARAMS, 8, "uint") ; fReturnRemembered
@@ -158,63 +138,34 @@ BTDevList(Search_Params=15, Timeout=0)
 	NumPut(IssueInquiry, BLUETOOTH_DEVICE_SEARCH_PARAMS, 20, "uint") ; fIssueInquiry
 	NumPut(Timeout, BLUETOOTH_DEVICE_SEARCH_PARAMS, 24, "uint") ; cTimeoutMultiplier
 	
-	;https://www.autohotkey.com/boards/viewtopic.php?f=76&t=83224&sid=e91fdb4bfefebefbb45b786e56eccdb7&start=20
 	VarSetCapacity(BLUETOOTH_DEVICE_INFO, 560, 0)
 	NumPut(560, BLUETOOTH_DEVICE_INFO, 0, "uint")
 	loop
 	{
 		If (A_Index = 1)
 		{
-			foundedDevice := DllCall(BTFindFirstDevice, "ptr", &BLUETOOTH_DEVICE_SEARCH_PARAMS, "ptr", &BLUETOOTH_DEVICE_INFO)
-			if !foundedDevice
-			{
-				;msgbox "No bluetooth radios found, or off"
-				break
-			}
+			foundBTDevice := DllCall(BTFindFirstDevice, "ptr", &BLUETOOTH_DEVICE_SEARCH_PARAMS, "ptr", &BLUETOOTH_DEVICE_INFO)
+			if !foundBTDevice
+				Return "BTIsOff"
 		}
 		else
 		{
-			if !DllCall(BTFindNextDevice, "ptr", foundedDevice, "ptr", &BLUETOOTH_DEVICE_INFO)
-			{
-				;msgbox "Device list end"
+			if !DllCall(BTFindNextDevice, "ptr", foundBTDevice, "ptr", &BLUETOOTH_DEVICE_INFO)
 				break
-			}
 		}
 		DevIndex += 1
 		ThisName := StrGet(&BLUETOOTH_DEVICE_INFO+64)
-		;msgbox % ThisName
 
-		;https://learn.microsoft.com/en-us/windows/win32/api/bluetoothapis/ns-bluetoothapis-bluetooth_device_info_struct	
 		ThisAddr :=	NumGet(BLUETOOTH_DEVICE_INFO, 8, "ptr")	;Address
-		;msgbox % ThisAddr
 		ThisAddr :=	Dec2Mac(ThisAddr)
 		ThisCoD :=	NumGet(BLUETOOTH_DEVICE_INFO, 16, "UInt")	;ulClassofDevice
 		ThisConSts := NumGet(BLUETOOTH_DEVICE_INFO, 20, "Int")	;fConnected
 		ThisRemSts := NumGet(BLUETOOTH_DEVICE_INFO, 24, "Int")	;fRemembered
 		ThisAuthSts := NumGet(BLUETOOTH_DEVICE_INFO, 28, "Int")	;fAuthenticated
 		
-			;stLastSeen ThisLSeen := NumGet(BLUETOOTH_DEVICE_INFO, 32, "Ptr")	
-		ThisLSeenYear := NumGet(BLUETOOTH_DEVICE_INFO, 32, "UShort")
-		ThisLSeenMonth := NumGet(BLUETOOTH_DEVICE_INFO, 32 + 2, "UShort")
-		ThisLSeenDayOfWeek := NumGet(BLUETOOTH_DEVICE_INFO, 32 + 4, "UShort")
-		ThisLSeenDay := NumGet(BLUETOOTH_DEVICE_INFO, 32 + 6, "UShort")
-		ThisLSeenHour := NumGet(BLUETOOTH_DEVICE_INFO, 32 + 8, "UShort")
-		ThisLSeenMinute := NumGet(BLUETOOTH_DEVICE_INFO, 32 + 10, "UShort")
-		ThisLSeenSecond := NumGet(BLUETOOTH_DEVICE_INFO, 32 + 12, "UShort")
-		ThisLSeenMilliseconds := NumGet(BLUETOOTH_DEVICE_INFO, 32 + 14, "UShort")
-		ThisLSeen := Timestamp(ThisLSeenYear, ThisLSeenMonth, ThisLSeenDay, ThisLSeenHour, ThisLSeenMinute,  ThisLSeenSecond, ThisLSeenMilliseconds, "-")
-
-			;stLastUsed ThisLUsed := NumGet(BLUETOOTH_DEVICE_INFO, 48, "Ptr")
-		ThisLUsedYear := NumGet(BLUETOOTH_DEVICE_INFO, 48, "UShort")
-		ThisLUsedMonth := NumGet(BLUETOOTH_DEVICE_INFO, 48 + 2, "UShort")
-		ThisLUsedDayOfWeek := NumGet(BLUETOOTH_DEVICE_INFO, 48 + 4, "UShort")
-		ThisLUsedDay := NumGet(BLUETOOTH_DEVICE_INFO, 48 + 6, "UShort")
-		ThisLUsedHour := NumGet(BLUETOOTH_DEVICE_INFO, 48 + 8, "UShort")
-		ThisLUsedMinute := NumGet(BLUETOOTH_DEVICE_INFO, 48 + 10, "UShort")
-		ThisLUsedSecond := NumGet(BLUETOOTH_DEVICE_INFO, 48 + 12, "UShort")
-		ThisLUsedMilliseconds := NumGet(BLUETOOTH_DEVICE_INFO, 48 + 14, "UShort")
-		ThisLUsed := Timestamp(ThisLUsedYear, ThisLUsedMonth, ThisLUsedDay, ThisLUsedHour, ThisLUsedMinute,  ThisLUsedSecond, ThisLUsedMilliseconds, "-")
-
+		ThisLSeen := BadBTTimestamp(NumGet(BLUETOOTH_DEVICE_INFO, 32, "UShort"), NumGet(BLUETOOTH_DEVICE_INFO, 32 + 2, "UShort"), NumGet(BLUETOOTH_DEVICE_INFO, 32 + 6, "UShort"), NumGet(BLUETOOTH_DEVICE_INFO, 32 + 8, "UShort"), NumGet(BLUETOOTH_DEVICE_INFO, 32 + 10, "UShort"), NumGet(BLUETOOTH_DEVICE_INFO, 32 + 12, "UShort"), NumGet(BLUETOOTH_DEVICE_INFO, 32 + 14, "UShort"), "-")
+		
+		ThisLUsed := BadBTTimestamp(NumGet(BLUETOOTH_DEVICE_INFO, 48, "UShort"), NumGet(BLUETOOTH_DEVICE_INFO, 48 + 2, "UShort"), NumGet(BLUETOOTH_DEVICE_INFO, 48 + 6, "UShort"), NumGet(BLUETOOTH_DEVICE_INFO, 48 + 8, "UShort"), NumGet(BLUETOOTH_DEVICE_INFO, 48 + 10, "UShort"), NumGet(BLUETOOTH_DEVICE_INFO, 48 + 12, "UShort"), NumGet(BLUETOOTH_DEVICE_INFO, 48 + 14, "UShort"), "-")
 		
 		if ( ThisName = "")
 			ThisName = (no device name)
@@ -222,21 +173,18 @@ BTDevList(Search_Params=15, Timeout=0)
 		ThisBtDevices[DevIndex] := object("Name",ThisName, "Addr",ThisAddr, "CoD",ThisCoD, "ConSts",ThisConSts, "RemSts",ThisRemSts, "AuthSts",ThisAuthSts, "LSeen",ThisLSeen, "LUsed",ThisLUsed)
 	}
 	DllCall(BTFindDeviceClose, "ptr", foundedDevice)
-	;msgbox % nameList
 	Return ThisBtDevices
 }
 
 BTDevInfo(NameOrAddr, Timeout=0)
 {
-	if !(BTFindFirstDevice)
-		BTFindFirstDevice := DllCall("GetProcAddress", "Ptr", hBTProps, "AStr", "BluetoothFindFirstDevice", "Ptr") ;"Bthprops.cpl\BluetoothFindFirstDevice"
-	if !(BTFindNextDevice)
-		BTFindNextDevice := DllCall("GetProcAddress", "Ptr", hBTProps, "AStr", "BluetoothFindNextDevice", "Ptr") ;"Bthprops.cpl\BluetoothFindNextDevice"
-	if !(BTFindDeviceClose)
-		BTFindDeviceClose := DllCall("GetProcAddress", "Ptr", hBTProps, "AStr", "BluetoothFindDeviceClose", "Ptr") ;"Bthprops.cpl\BluetoothFindDeviceClose"
+	
+	BTFindFirstDevice := DllCall("GetProcAddress", "Ptr", hBTProps, "AStr", "BluetoothFindFirstDevice", "Ptr") ;"Bthprops.cpl\BluetoothFindFirstDevice"
+	BTFindNextDevice := DllCall("GetProcAddress", "Ptr", hBTProps, "AStr", "BluetoothFindNextDevice", "Ptr") ;"Bthprops.cpl\BluetoothFindNextDevice"
+	BTFindDeviceClose := DllCall("GetProcAddress", "Ptr", hBTProps, "AStr", "BluetoothFindDeviceClose", "Ptr") ;"Bthprops.cpl\BluetoothFindDeviceClose"
 	
 	ThisBtDevice := {}
-	;https://learn.microsoft.com/en-us/windows/win32/api/bluetoothapis/ns-bluetoothapis-bluetooth_device_search_params
+
 	VarSetCapacity(BLUETOOTH_DEVICE_SEARCH_PARAMS, 24+A_PtrSize*2, 0)
 	NumPut(24+A_PtrSize*2, BLUETOOTH_DEVICE_SEARCH_PARAMS, 0, "uint")
 
@@ -256,7 +204,6 @@ BTDevInfo(NameOrAddr, Timeout=0)
 	NumPut(IssueInquiry, BLUETOOTH_DEVICE_SEARCH_PARAMS, 20, "uint") ; fIssueInquiry
 	NumPut(Timeout, BLUETOOTH_DEVICE_SEARCH_PARAMS, 24, "uint") ; cTimeoutMultiplier
 	
-	;https://www.autohotkey.com/boards/viewtopic.php?f=76&t=83224&sid=e91fdb4bfefebefbb45b786e56eccdb7&start=20
 	VarSetCapacity(BLUETOOTH_DEVICE_INFO, 560, 0)
 	NumPut(560, BLUETOOTH_DEVICE_INFO, 0, "uint")
 	BtDevFound := 0
@@ -264,71 +211,41 @@ BTDevInfo(NameOrAddr, Timeout=0)
 	{
 		If (A_Index = 1)
 		{
-			foundedDevice := DllCall(BTFindFirstDevice, "ptr", &BLUETOOTH_DEVICE_SEARCH_PARAMS, "ptr", &BLUETOOTH_DEVICE_INFO)
-			if !foundedDevice
-			{
-				;msgbox "No bluetooth radios found, or off"
-				break
-			}
+			foundBTDevice := DllCall(BTFindFirstDevice, "ptr", &BLUETOOTH_DEVICE_SEARCH_PARAMS, "ptr", &BLUETOOTH_DEVICE_INFO)
+			if !foundBTDevice
+				Return "BTIsOff"
 		}
 		else
 		{
-			if !DllCall(BTFindNextDevice, "ptr", foundedDevice, "ptr", &BLUETOOTH_DEVICE_INFO)
-			{
-				;msgbox "Device list end"
+			if !DllCall(BTFindNextDevice, "ptr", foundBTDevice, "ptr", &BLUETOOTH_DEVICE_INFO)
 				break
-			}
 		}
 		ThisName := StrGet(&BLUETOOTH_DEVICE_INFO+64)
-		;msgbox % ThisName
-
-		;https://learn.microsoft.com/en-us/windows/win32/api/bluetoothapis/ns-bluetoothapis-bluetooth_device_info_struct	
+	
 		ThisAddr :=	NumGet(BLUETOOTH_DEVICE_INFO, 8, "ptr")	;Address
-		;msgbox % ThisAddr
+		
 		ThisAddr :=	Dec2Mac(ThisAddr)
 		
 		if (ThisName != NameOrAddr) and (ThisAddr != NameOrAddr)
 			continue
-		
-		BtDevFound := 1
 		
 		ThisCoD :=	NumGet(BLUETOOTH_DEVICE_INFO, 16, "UInt")	;ulClassofDevice
 		ThisConSts := NumGet(BLUETOOTH_DEVICE_INFO, 20, "Int")	;fConnected
 		ThisRemSts := NumGet(BLUETOOTH_DEVICE_INFO, 24, "Int")	;fRemembered
 		ThisAuthSts := NumGet(BLUETOOTH_DEVICE_INFO, 28, "Int")	;fAuthenticated
 		
-			;stLastSeen ThisLSeen := NumGet(BLUETOOTH_DEVICE_INFO, 32, "Ptr")	
-		ThisLSeenYear := NumGet(BLUETOOTH_DEVICE_INFO, 32, "UShort")
-		ThisLSeenMonth := NumGet(BLUETOOTH_DEVICE_INFO, 32 + 2, "UShort")
-		ThisLSeenDayOfWeek := NumGet(BLUETOOTH_DEVICE_INFO, 32 + 4, "UShort")
-		ThisLSeenDay := NumGet(BLUETOOTH_DEVICE_INFO, 32 + 6, "UShort")
-		ThisLSeenHour := NumGet(BLUETOOTH_DEVICE_INFO, 32 + 8, "UShort")
-		ThisLSeenMinute := NumGet(BLUETOOTH_DEVICE_INFO, 32 + 10, "UShort")
-		ThisLSeenSecond := NumGet(BLUETOOTH_DEVICE_INFO, 32 + 12, "UShort")
-		ThisLSeenMilliseconds := NumGet(BLUETOOTH_DEVICE_INFO, 32 + 14, "UShort")
-		ThisLSeen := Timestamp(ThisLSeenYear, ThisLSeenMonth, ThisLSeenDay, ThisLSeenHour, ThisLSeenMinute,  ThisLSeenSecond, ThisLSeenMilliseconds, "-")
+		ThisLSeen := BadBTTimestamp(NumGet(BLUETOOTH_DEVICE_INFO, 32, "UShort"), NumGet(BLUETOOTH_DEVICE_INFO, 32 + 2, "UShort"), NumGet(BLUETOOTH_DEVICE_INFO, 32 + 6, "UShort"), NumGet(BLUETOOTH_DEVICE_INFO, 32 + 8, "UShort"), NumGet(BLUETOOTH_DEVICE_INFO, 32 + 10, "UShort"), NumGet(BLUETOOTH_DEVICE_INFO, 32 + 12, "UShort"), NumGet(BLUETOOTH_DEVICE_INFO, 32 + 14, "UShort"), "-")
 
-			;stLastUsed ThisLUsed := NumGet(BLUETOOTH_DEVICE_INFO, 48, "Ptr")
-		ThisLUsedYear := NumGet(BLUETOOTH_DEVICE_INFO, 48, "UShort")
-		ThisLUsedMonth := NumGet(BLUETOOTH_DEVICE_INFO, 48 + 2, "UShort")
-		ThisLUsedDayOfWeek := NumGet(BLUETOOTH_DEVICE_INFO, 48 + 4, "UShort")
-		ThisLUsedDay := NumGet(BLUETOOTH_DEVICE_INFO, 48 + 6, "UShort")
-		ThisLUsedHour := NumGet(BLUETOOTH_DEVICE_INFO, 48 + 8, "UShort")
-		ThisLUsedMinute := NumGet(BLUETOOTH_DEVICE_INFO, 48 + 10, "UShort")
-		ThisLUsedSecond := NumGet(BLUETOOTH_DEVICE_INFO, 48 + 12, "UShort")
-		ThisLUsedMilliseconds := NumGet(BLUETOOTH_DEVICE_INFO, 48 + 14, "UShort")
-		ThisLUsed := Timestamp(ThisLUsedYear, ThisLUsedMonth, ThisLUsedDay, ThisLUsedHour, ThisLUsedMinute,  ThisLUsedSecond, ThisLUsedMilliseconds, "-")
-
+		ThisLUsed := BadBTTimestamp(NumGet(BLUETOOTH_DEVICE_INFO, 48, "UShort"), NumGet(BLUETOOTH_DEVICE_INFO, 48 + 2, "UShort"), NumGet(BLUETOOTH_DEVICE_INFO, 48 + 6, "UShort"), NumGet(BLUETOOTH_DEVICE_INFO, 48 + 8, "UShort"), NumGet(BLUETOOTH_DEVICE_INFO, 48 + 10, "UShort"), NumGet(BLUETOOTH_DEVICE_INFO, 48 + 12, "UShort"), NumGet(BLUETOOTH_DEVICE_INFO, 48 + 14, "UShort"), "-")
 		
 		if ( ThisName = "")
 			ThisName = (no device name)
 		
 		ThisBtDevice := object("Name",ThisName, "Addr",ThisAddr, "CoD",ThisCoD, "ConSts",ThisConSts, "RemSts",ThisRemSts, "AuthSts",ThisAuthSts, "LSeen",ThisLSeen, "LUsed",ThisLUsed)
 		DllCall(BTFindDeviceClose, "ptr", foundedDevice)
-		;msgbox % nameList
 		Return ThisBtDevice
 	}
-	return "DeviceNotFound"
+	Return "BTDeviceNotFound"
 }
 
 mkBTDevInfoSTRUCT(ByRef var,Addr,Name="",CoD="")
@@ -352,16 +269,14 @@ BTUpdateDevName(NewName, Addr)
 {
 	BTUpdateDeviceRecord := DllCall("GetProcAddress", "Ptr", hBTProps, "AStr", "BluetoothUpdateDeviceRecord", "Ptr") ;"Bthprops.cpl\BluetoothUpdateDeviceRecord"
 	mkBTDevInfoSTRUCT(hpStruct, Addr, NewName)
-	DllCall(BTUpdateDeviceRecord, "ptr", &hpStruct, "ptr")
-	return 
+	result := DllCall(BTUpdateDeviceRecord, "ptr", &hpStruct, "ptr")
+	return result
 }
 
 BTSetServiceState(OnOff, ByRef BTDevInfoSTRUCT, CLSID="{00001124-0000-1000-8000-00805F9B34FB}")
 {
-	if !(BTSetServiceState)
-		BTSetServiceState := DllCall("GetProcAddress", "Ptr", hBTProps, "AStr", "BluetoothSetServiceState", "Ptr") ;"Bthprops.cpl\BluetoothSetServiceState"
-	if !(CLSIDFromString)
-		CLSIDFromString := DllCall("GetProcAddress", "Ptr", DllCall("GetModuleHandle", "Str", "ole32", "Ptr"), "AStr", "CLSIDFromString", "Ptr") ;"ole32\CLSIDFromString"
+	BTSetServiceState := DllCall("GetProcAddress", "Ptr", hBTProps, "AStr", "BluetoothSetServiceState", "Ptr") ;"Bthprops.cpl\BluetoothSetServiceState"
+	CLSIDFromString := DllCall("GetProcAddress", "Ptr", DllCall("GetModuleHandle", "Str", "ole32", "Ptr"), "AStr", "CLSIDFromString", "Ptr") ;"ole32\CLSIDFromString"
 
 	VarSetCapacity(ThisCLSID, 16)
 	DllCall(CLSIDFromString, "wstr", CLSID, "ptr", &ThisCLSID)
@@ -405,11 +320,9 @@ BTSetServiceState(OnOff, ByRef BTDevInfoSTRUCT, CLSID="{00001124-0000-1000-8000-
 	Return 0
 }
 
-
-
 CoD2Obj(DecimalCoD)
 {
-	BinaryCoDRaw := Bin(DecimalCoD)
+	BinaryCoDRaw := BadBTBin(DecimalCoD)
 	BinaryCod := {}
 	ThisCoDObj := {}
 	ServiceClasses := {}
@@ -425,14 +338,10 @@ CoD2Obj(DecimalCoD)
 	Loop 24
 	{
 		bit := SubStr(BinaryCoDRaw, -(A_Index-1), 1)
-		;BinaryCod.Push(bit)
 		BinaryCod.InsertAt(A_Index-1, bit)
-		;msgbox % "bit" A_Index-1 ": " bit
 	}
 	
 	ServiceClasses := object("LimitedDiscoverableMode",BinaryCod[13], "Positioning",BinaryCod[16], "Networking",BinaryCod[17], "Rendering",BinaryCod[18], "Capturing",BinaryCod[19], "ObjectTransfer",BinaryCod[20], "Audio",BinaryCod[21], "Telephony",BinaryCod[22], "Information",BinaryCod[23])
-	
-	
 	
 	if !(BinaryCod[12]) and !(BinaryCod[11]) and !(BinaryCod[10]) and !(BinaryCod[9]) and !(BinaryCod[8]) {
 		MajorCoD := object("Class","Miscellaneous")
@@ -637,20 +546,15 @@ CoD2Obj(DecimalCoD)
 		MinorCoD := object("Class","Undefined")
 	}
 	
-	
 	ThisCODObj.Major := MajorCoD
 	ThisCODObj.Minor := MinorCoD
 	ThisCODObj.ServiceClasses := ServiceClasses
 	return ThisCODObj
 }
 
-
-
-
 ;;;;;;;; Misc
 
-
-Timestamp(Year="", Month="", Day="", Hour="", Minute="", Second="", Milliseconds="", dashes="")
+BadBTTimestamp(Year="", Month="", Day="", Hour="", Minute="", Second="", Milliseconds="", dashes="")
 {
 	if (StrLen(Month) < 2) and (Month != "")
 		Month := "0" Month
@@ -740,33 +644,26 @@ Dec2Mac( int, pad=0 )
 
 }
 
-Bin(x){
+BadBTBin(x){
 	while x
 		r:=1&x r,x>>=1
 	return r
 }
 
-Dec(x){
+BadBTDec(x){
 	b:=StrLen(x),r:=0
 	loop,parse,x
 		r|=A_LoopField<<--b
 	return r
 }
 
-StrPutVar(str, ByRef var, encoding)
-	{
-	  factor := (encoding="utf-16" or encoding="cp1200") ? 2 : 1
-	  VarSetCapacity(var, StrPut(str, encoding) * factor)
-	  return StrPut(str, &var, encoding)
-	}
-
-VerChk()
+BadBTVerChk()
 {
 	if (BadBTLib_Req_Major > BadBTLib_Ver_Major)
 		VerError := "expexted major ver`: " BadBTLib_Req_Major "`, got`: "BadBTLib_Ver_Major
 		
-	if (BadBTLib_Req_Minor > BadBTLib_Ver_Minor) and (BadBTLib_Req_Major > BadBTLib_Ver_Major)
-		VerError := VerError "`nexpexted minor ver`: " BadBTLib_Req_Minor "`, got`: " BadBTLib_Ver_Minor
+	if (BadBTLib_Req_Minor > BadBTLib_Ver_Minor) and (BadBTLib_Req_Major < BadBTLib_Ver_Major)
+		VerError := "expexted major ver`: " BadBTLib_Req_Major "`, got`: "BadBTLib_Ver_Major "`nexpexted minor ver`: " BadBTLib_Req_Minor "`, got`: " BadBTLib_Ver_Minor
 	else
 		if (BadBTLib_Req_Minor > BadBTLib_Ver_Minor)
 			VerError := "expexted minor ver`: " BadBTLib_Req_Minor "`, got`: " BadBTLib_Ver_Minor

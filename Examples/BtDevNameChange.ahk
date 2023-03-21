@@ -4,9 +4,13 @@ SendMode Input  ; Recommended for new scripts due to its superior speed and reli
 SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 #SingleInstance Force
 SetBatchLines -1
+SplitPath, A_ScriptFullPath, , ScriptFolder, , ScriptNameNoExt
 Global BadBTLib_Req_Major := 2
 Global BadBTLib_Req_Minor := 0
 #include ..\BadBTLib.ahk
+
+if (A_IsCompiled) and (A_Args[1] = "applyonboot")
+	goto applyonboot
 
 
 BtDevices := BTDevList(2) ; obtain known devices
@@ -45,6 +49,31 @@ if ErrorLevel
 	Goto Cancel
 BTUpdateDevName(NewName, BtDevices[DevIndex].Addr)
 msgbox Toggle bluetooth off and on for chamge to take effect.
+if (A_IsCompiled)
+	MsgBox, 36, apply on boot?, apply on boot?
+
+Ifmsgbox, Yes
+{
+	IniWrite, % NewName, %A_ScriptDir%\%ScriptNameNoExt%.ini, Names2Change, % BtDevices[DevIndex].Addr
+	if (!FileExist(A_Startup "\" ScriptNameNoExt ".lnk"))
+		FileCreateShortcut, %A_ScriptDir%\%ScriptNameNoExt%.exe, %A_Startup%\%ScriptNameNoExt%.lnk, %A_ScriptDir%, applyonboot, Starts %ScriptNameNoExt%, , , ,
+}
+
 ExitApp
 return
 
+
+
+applyonboot:
+IniRead, OutputVarSection, %A_ScriptDir%\%ScriptNameNoExt%.ini, Names2Change
+
+names2cObj := StrSplit(OutputVarSection , "`n")
+
+loop % names2cObj.Length()
+{
+	N2CObj := StrSplit(names2cObj[A_Index] , "=")
+	BTUpdateDevName(N2CObj[2], N2CObj[1])
+}
+
+ExitApp
+return
