@@ -21,13 +21,14 @@ Badly made AHK Bluetooth library, Directly interacts with windows bluetooth apis
 
 ## Compilation
 
-~~- Download AutoHotKey from above and Install it.~~ 
+- ~~Download AutoHotKey from above and Install it.~~ 
 
 TODO: CLI interface when compiled
 
 # Usage
 
-~~BadBTLib.exe --some-command~~
+- `#include BadBTLib.ahk`
+- ~~BadBTLib.exe --some-command~~
 
 https://github.com/ArchemedIan/BadBTLib/tree/main/Examples
 
